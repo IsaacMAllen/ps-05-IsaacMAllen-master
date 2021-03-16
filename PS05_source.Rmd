@@ -1,0 +1,427 @@
+
+---
+title: "Problem Set 05: Regression with One Categorical Variable"
+author: "Isaac Allen"
+date: 'Last compiled: `r format(Sys.time(), "%B %d, %Y")`'
+output:
+  bookdown::html_document2:
+    theme: lumen
+    toc: yes
+    toc_float: yes
+    df_print: kable
+    css: MyLab.css 
+---
+
+
+```{r include = FALSE}
+# Do not edit this code block/chunk!
+library(knitr)
+knitr::opts_chunk$set(echo = TRUE, fig.align = "center", comment = NA, message = FALSE,  warning = FALSE, fig.width = 16/2, fig.height = 9/2)
+```
+
+
+# Background 
+
+In this problem set, hate crimes data from the US will be used.  The FiveThirtyEight article about the data appears in the Jan 23, 2017  ["Higher Rates Of Hate Crimes Are Tied To Income
+Inequality."](https://fivethirtyeight.com/features/higher-rates-of-hate-crimes-are-tied-to-income-inequality/)
+
+The crimes data will be used to run regression models with a single categorical predictor (explanatory) variable. 
+
+## Setup{-}
+
+First load the necessary packages: 
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(moderndive)
+library(readr)
+```
+
+Next, the data is read into the object `hate_crimes` from where it is stored on the web using the `read_csv()` function. 
+
+```{r}
+hate_crimes <- read_csv("http://bit.ly/2ItxYg3")
+```
+
+```{r}
+glimpse(hate_crimes)
+```
+
+Be sure **ALSO** to examine the data in the viewer.
+
+Each case/row in these data is a state in the US. The response variable we will consider is `hate_crimes`, which is the number of hate crimes per 100k individuals in the 10 days after the 2016 US election as measured by the Southern Poverty Law Center (SPLC). 
+
+This week we will use three categorical explanatory variables in this data set: 
+
+* `trump_support`: level of Trump support in 2016 election (low, medium or high - split into roughly equal number of cases)
+* `unemployment`: level of unemployment in a state (low or high - split below or above mean)
+* `median_house_inc`: median household income in the state (low or high - split below or above mean)
+
+
+
+*** 
+
+
+
+# Hate Crimes and Trump Support
+
+Let's start by modeling the relationship between:
+
+* $y$: `hate_crimes` per 100K individuals 
+* $x$: Level of `trump_support` in the state: `low`, `medium`, or `high`
+
+
+1. Create a visual model of these data (a graph) that will allow you to conduct an "eyeball test" of the relationship between hate crimes per 100K and level of Trump support. Include appropriate axes labels and a title. Please note that because of alphanumeric ordering, the levels of `trump_support` are ordered `high`, `low`, `medium`, and hence the baseline group is `high`. Also note, that we could "reorder" the levels to `low`, `medium`, `high`....though we will leave them as is for this Problem Set. 
+
+```{r}
+ggplot(data = hate_crimes, aes(x = trump_support, y = hate_crimes)) +
+  geom_boxplot(na.rm = TRUE) +
+  labs(title = "Hate Crimes vs. Trump Support",
+       y = "Hate Crimes (per 100k people)", 
+       x = "Trump Support")
+
+```
+
+2.  Comment on the relationship between  `trump_support`, and `hate_crimes`. Is this what you would've expected?
+
+<div id="answer">
+Considering that the data in this set is derived from the 10 days following the 2016 election, I'm honestly not that surprised to see that the lower the support for Trump was during this time, the higher the hate crimes were for said individuals. I personally felt that there was a massive amount of heated tension in America regarding this election and that numbers like this were bound to arise given either outcome. 
+
+
+
+</div> 
+
+
+3. Create a model that examines the relationship between hate crime rates and the level of Trump support.  Store the results of your model in an object named `hate_mod`.  Generate a regression table using `hate_mod`. 
+
+```{r}
+hate_mod <- lm(hate_crimes ~ trump_support, data = hate_crimes)
+get_regression_table(hate_mod)
+
+```
+
+
+4. What does the intercept mean in this regression table?
+
+<div id="answer">
+The intercept indicates the mean number of hate crimes per 100,000 people in the 10 days following the 2016 election in states with high Trump support was `r round(coef(hate_mod)[1], 3)`. `Washington D.C. included, as it was not asked to be removed in question 3.`
+
+
+
+</div> 
+
+
+5. What does the model estimate as the number of hate crimes per 100,000 people in states with "low" Trump support?
+
+<div id="answer">
+This model estimates that, on average, `r  round(coef(hate_mod)[1], 3) + round(coef(hate_mod)[2], 3)` hate crimes were committed per 100,000 people in the 10 days following the 2016 election in states where Trump support was low. `Washington D.C. included, as it was not asked to be removed in question 3.`
+
+
+
+</div> 
+
+
+
+6. Does the model estimate that hate crimes are more frequent in states that show "low" or "high" support for Trump?
+
+<div id="answer">
+No, as mentioned previously, the data in this set only comes from the 10 days following the 2016 election. To estimate that, we'd need a much larger and more robust set to work with. `Washington D.C. included, as it was not asked to be removed in question 3.`
+
+
+
+</div> 
+
+
+7. How much greater were hate crimes in "medium" Trump-support states compared to "high" Trump-support states?
+
+<div id="answer">
+According to this data set, states with medium Trump support saw a mean difference of `r round(coef(hate_mod)[3], 3)` hate crimes per 100,000 people compared with states with high support.`Washington D.C. included, as it was not asked to be removed in question 3.` 
+
+
+
+</div> 
+
+
+
+8. What are the three possible fitted values $\widehat{y}$ for this model? Hint: use the `get_regression_points()` function to explore this if you are not sure!
+
+ 
+```{r}
+y_hats <- get_regression_points(hate_mod) %>%
+            select(hate_crimes_hat) %>%
+              unique() %>%
+                pull()
+y_hats
+```
+
+<div id="answer">
+The three possible $\widehat{y}$ values for this model are `r y_hats[1]`, `r y_hats[2]`, and `r y_hats[3]` (Low, Medium, and High Trump support respectively). 
+
+
+
+</div> 
+
+
+9.  Below we calculate the group means of hate crimes for the `high`, `medium` and `low` levels of Trump support. How do these numbers compare to the three possible fitted values $\widehat{y}$ for this model?
+
+```{r}
+hate_crimes %>% 
+group_by(trump_support) %>% 
+  summarize(mean_hate_crimes = mean(hate_crimes, na.rm = T))
+```
+
+<div id="answer">
+They are the same exact values without them being rounded.
+
+
+
+</div> 
+
+
+*** 
+
+
+
+## The Regression Equation{-}
+
+The regression equation for this model is the following (knit it to look at output!)
+
+
+$$
+\widehat{y} = 0.191 + 0.269 \times 1_{\mbox{low support}}(x) + 0.031 \times 1_{\mbox{med support}}(x)
+$$
+
+So for instance, in a state in which `trump_support` is "low" you would plug in 1 for $1_{\mbox{low support}}(x)$, and 0 in for  $1_{\mbox{med support}}(x)$ and solve as follows:
+
+***
+
+$$
+\begin{aligned} 
+\widehat{y} &= 0.191 + 0.269 \times 1 + 0.031 \times 0 \\
+\widehat{y} &= 0.191 + 0.269 + 0\\
+\widehat{y} &= 0.460
+\end{aligned} 
+$$
+
+
+***
+
+
+10. Solve the regression equation for a state in which `trump_support` is "high".
+
+<div id="answer">
+```{r}
+## Your example regression equation doesn't account for the fact that Washington D.C. is not a state which question 11 disregards in its wording, so I left this model unfiltered to match your values since I figured this is what you'd be expecting.
+hate_mod <- lm(hate_crimes ~ trump_support, data = hate_crimes)
+coef(hate_mod)
+```
+The fitted Y value (Hate Crimes) for a state in which Trump support is high is `r predict(hate_mod, newdata = data.frame(trump_support = "high"))`. 
+
+$$
+\begin{aligned} 
+\widehat{\text{Hate Crimes}} &= `r round(coef(hate_mod)[1], 3)` + `r round(coef(hate_mod)[2], 3)` \times 0 + `r round(coef(hate_mod)[3], 3)` \times 0 \\
+\widehat{\text{Hate Crimes}} &= `r round(coef(hate_mod)[1], 3)` + 0 + 0\\
+\widehat{\text{Hate Crimes}} &= `r round(coef(hate_mod)[1], 3)`
+\end{aligned} 
+$$
+
+
+</div> 
+
+
+11. Which 5 states had the highest rate of hate crimes? What was the level of Trump support in these 5 states? You can solve this any way you choose, using code or not...
+
+Do these results surprise you? (There is no right answer to this question.)
+
+```{r}
+highest_states <- hate_crimes %>%
+                  filter(state != "District of Columbia") %>%
+                      group_by(state) %>%
+                        select(state, hate_crimes, trump_support) %>%
+                        arrange(desc(hate_crimes)) %>%
+                          head(n = 5)
+highest_states
+```
+
+<div id="answer">
+`r highest_states$state[1]`, `r highest_states$state[2]`, `r highest_states$state[3]`, `r highest_states$state[4]`, and `r highest_states$state[5]` were the states that had the highest rate of hate crimes in the 10 days following the 2016 election according to this data set. `r highest_states$state[1]` had `r highest_states$trump_support[1]` Trump support, `r highest_states$state[2]` had `r highest_states$trump_support[2]` Trump support, `r highest_states$state[3]` had `r highest_states$trump_support[3]` Trump support, `r highest_states$state[4]` had `r highest_states$trump_support[4]` Trump support, and `r highest_states$state[5]` had `r highest_states$trump_support[5]` Trump support. Considering all the violence that's occurred in Oregon recently in response to Trump's recent handling of the protests following the death of George Floyd, I'm not at all surprised to see Oregon at the top of this list (dated 9/16/2020). I don't really know enough about territorial crime statistics to really speak on any other impression from these results.
+
+Note: The District of Columbia is not actually a state!
+
+
+
+</div> 
+
+*** 
+
+# Hate Crimes and Unemployment  
+
+We will next model the relationship between: 
+
+* $y$: `hate_crimes` per 100K individuals  after the 2016 US election 
+* $x$: Level of unemployment in the state (`low`, or `high`)
+
+***
+
+12. Create a visual model of this data (a graph) that will allow you to conduct an "eyeball test" of the relationship between hate crimes per 100K and unemployment level. Include appropriate axes labels and a title.
+
+```{r}
+ggplot(data = hate_crimes, aes(x = unemployment, y = hate_crimes)) +
+  geom_boxplot(na.rm = TRUE) +
+    labs(title = "Hate Crimes vs. Unemployment",
+         x = "Unemployment Level (by state *Washington D.C. included*)",
+         y = "Hate Crimes (per 100k people)")
+
+```
+
+
+
+13. Create a model that examines the relationship between hate crime rates and the unemployment level.  Name this model `job_mod`. Generate a regression table for `job_mod`.
+
+```{r}
+job_mod <- lm(hate_crimes ~ unemployment, data = hate_crimes)
+get_regression_table(job_mod)
+```
+
+
+14. Write out the regression equation for `job_mod`. 
+
+<div id="answer">
+$$\widehat{\text{Hate Crimes}}  = `r round(coef(job_mod)[1], 3)` + `r round(coef(job_mod)[2], 3)`\cdot \text{(states w/ low unemployment)}$$
+
+
+
+</div> 
+
+
+15. What does the intercept mean in this regression table?
+
+<div id="answer">
+The mean number of hate crimes per 100k people in states where unemployment is high. 
+`Washington D.C. is included in this model as it wask not asked to be removed in question 13`
+
+
+</div> 
+
+
+
+16. What does the model estimate as the number of hate crimes per 100,000 people in states with  "low" unemployment?
+
+<div id="answer">
+The model estimates that, on average, `r round(coef(job_mod)[2], 3)` hate crimes occurred per 100,000 people in "states" with low unemployment within the 10 days following the 2016 election.`Washington D.C. included as it wask not asked to be removed in question 13` 
+
+
+
+</div> 
+
+
+
+17. What are the two possible fitted values $\widehat{y}$ for this model? Why are there only two this time, instead of the three like the previous model?
+
+<div id="answer">
+`r y_hats_17 <- get_regression_points(job_mod) %>%
+            select(hate_crimes_hat) %>%
+              unique() %>%
+                pull()`
+                
+`r y_hats_17[1]` and `r y_hats_17[2]`; There are only two values for unemployment in this model: high and low.
+
+</div> 
+
+
+18. Use the `get_regression_points()` function to generate a table showing the fitted values and the residuals for the model relating `hate_crimes` to unemployment (`job_mod`).  Examine the first row:  How are the residuals calculated here? 
+
+```{r}
+head(get_regression_points(job_mod), 1)
+```
+ 
+<div id="answer">
+The residuals are calculated by returning the difference between hate_crimes and hate_crimes_hat.
+
+
+</div> 
+
+***
+
+
+
+# Hate Crimes and Household Income 
+
+19. Create a model that examines the relationship between `hate_crimes` and median household income in the state `median_house_inc`.  Name the model `job_med_mod`. 
+
+```{r}
+job_med_mod <- lm(hate_crimes ~ median_house_inc, data = hate_crimes)
+job_med_mod
+
+if(coef(job_med_mod)[1] > (coef(job_med_mod)[1] + coef(job_med_mod)[2])) 
+{
+  q_20_A <- round(abs(coef(job_med_mod)[2]), 3) 
+  q_20_B <- " more " 
+  q_20_C <- "in \"states\" with higher levels of household income vs. those with lower levels. `Washington D.C. wasn't filtered out of this model due to question 19 not asking me to specifically do this`"
+} else if(coef(job_med_mod)[1] < (coef(job_med_mod)[1] + coef(job_med_mod)[2])) 
+  {
+    q_20_A <- round(coef(job_med_mod)[2], 3) 
+    q_20_B <- " more "
+    q_20_C <- "in \"states\" with lower levels of household income vs. those with higher levels. `Washington D.C. wasn't filtered out of this model due to question 19 not asking me to specifically do this`"
+  } else 
+    {
+      q_20_A <- "the same amount of"
+      q_20_B <- ""
+      q_20_C <- "in all \"states\" regardless of lower or higher levels of household income.  `Washington D.C. wasn't filtered out of this model due to question 19 not asking me to specifically do this`"
+      
+}
+```
+
+
+20. Were there more hate crimes in areas with high or low median household incomes? How large was the difference between states with "low" and "high" levels of household income?
+
+<div id="answer">
+This model estimates that there were, on average, `r q_20_A``r q_20_B`hate crimes per 100,000 people `r q_20_C`   
+
+
+
+
+</div> 
+
+
+21. Run the `get_regression_points()` function for the `hate_crimes` and `median_house_inc` model (`job_med_mod`). 
+
+```{r}
+q_21 <- get_regression_points(job_med_mod) %>% filter(ID == 2)
+q_21
+if (q_21$residual[1] < 0) 
+{
+  q_21_A <- "overpredicted" 
+  q_21_B <- " by"
+  q_21_C <- abs(round(q_21$residual[1], 3))
+  q_21_D <- " points."
+} else if (q_21$residual[1] == 0) 
+  {
+    q_21_A <- "matched" 
+    q_21_B <- "."
+    q_21_C <- ""
+    q_21_D <- ""
+} else
+{
+  q_21_A <- "underpredicted"
+  q_21_B <- " by"
+  q_21_C <- round(q_21$residual[1], 3)
+  q_21_D <- " points."
+}
+
+```
+
+
+22. Take a look at data for Maine (row 2). Did the model **overpredict** or **underpredict** the `hate_crimes` level, compared to what was observed in the data?
+
+<div id="answer">
+This model `r q_21_A` the hate_crimes level for Maine`r q_21_B` `r q_21_C``r q_21_D` 
+
+
+</div> 
+
+
+***
+
+
